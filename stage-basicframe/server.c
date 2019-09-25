@@ -55,11 +55,91 @@ int process_user_or_admin_login_request(int acceptfd,MSG *msg)
 	}
 	return 0;	
 }
+/* */
+int get_modify_ff_info_type(char *modify_ff_info_type){
+	int i = 0;
+	for(i = 0;i<11;i++){
+	if(strcmp(modify_ff_info_type,modify_type[i])==0){
+	return i;
+}
+	}
+	printf("------%s------%d.\n",__func__,__LINE__);
+	return -1;
 
+}
+/* */
+int	set_modify_ff_info_sql(int modify_ff_info_type,MSG *msg,char* sql){
+	printf("---modify_ff_info_type---%d---%s------%d.\n",modify_ff_info_type,__func__,__LINE__);
+	switch(modify_ff_info_type){
+case 0:
+	sprintf(sql,"update usrinfo set %s=%d where staffno=%d",modify_type[0],msg->info.no,msg->info.no);
+	break;
+case 1:
+	sprintf(sql,"update usrinfo set %s=%d where staffno=%d",modify_type[1],msg->info.usertype,msg->info.no);
+	break;
+case 2:
+	sprintf(sql,"update usrinfo set %s='%s' where staffno=%d",modify_type[2],msg->info.name,msg->info.no);
+	break;
+case 3:
+	sprintf(sql,"update usrinfo set %s='%s' where staffno=%d",modify_type[3],msg->info.passwd,msg->info.no);
+	break;
+case 4:
+	sprintf(sql,"update usrinfo set %s=%d where staffno=%d",modify_type[4],msg->info.age,msg->info.no);
+	break;
+case 5:
+	sprintf(sql,"update usrinfo set %s='%s' where staffno=%d",modify_type[5],msg->info.phone,msg->info.no);
+	break;
+case 6:
+	sprintf(sql,"update usrinfo set %s='%s' where staffno=%d",modify_type[6],msg->info.addr,msg->info.no);
+	break;
+case 7:
+	sprintf(sql,"update usrinfo set %s='%s' where staffno=%d",modify_type[7],msg->info.work,msg->info.no);
+	break;
+case 8:
+	sprintf(sql,"update usrinfo set %s='%s' where staffno=%d",modify_type[8],msg->info.date,msg->info.no);
+	break;
+case 9:
+	sprintf(sql,"update usrinfo set %s=%d where staffno=%d",modify_type[9],msg->info.level,msg->info.no);
+	break;
+case 10:
+	sprintf(sql,"update usrinfo set %s=%lf where staffno=%d",modify_type[10],msg->info.salary,msg->info.no);
+	break;
+default:
+	printf("get modify ff info type error.\n");
+	return -1;
+	break;
+	}
+	printf("------%s------%s------%d.\n",__func__,sql,__LINE__);
+	return 0;
+}
+/* */
 int process_user_modify_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
-
+	char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	char** i;
+	msg->info.usertype =  msg->usertype;
+	strcpy(msg->info.name,msg->username);
+	strcpy(msg->info.passwd,msg->passwd);
+	printf("usrtype: %#x-----usrname: %s---passwd: %s.\n",msg->info.usertype,msg->info.name,msg->info.passwd);
+	if(set_modify_ff_info_sql(get_modify_ff_info_type(msg->recvmsg),msg,sql)){
+	strcpy(msg->recvmsg,"modify type failed.\n");
+	send(acceptfd,msg,sizeof(MSG),0);
+	return -1;
+	}
+	printf("%s\n",sql);
+	if(sqlite3_exec(db,sql,NULL,NULL,&errmsg)!=SQLITE_OK){
+	printf("sqlite3-exec-update-failed-%s------%d.\n",__func__,__LINE__);
+	strcpy(msg->recvmsg,"modify failed.\n");
+	send(acceptfd,msg,sizeof(MSG),0);
+	}else{
+	printf("sqlite3-exec-update-success-%s------%d.\n",__func__,__LINE__);
+	strcpy(msg->recvmsg,"OK");
+	send(acceptfd,msg,sizeof(MSG),0);
+	}
+	return 0;	
 }
 
 
@@ -67,20 +147,73 @@ int process_user_modify_request(int acceptfd,MSG *msg)
 int process_user_query_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
-
+	char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	int nrow,ncolumn,index;
+	int i,j;
+	msg->info.usertype =  msg->usertype;
+	strcpy(msg->info.name,msg->username);
+	strcpy(msg->info.passwd,msg->passwd);
+	printf("usrtype: %#x-----usrname: %s---passwd: %s.\n",msg->info.usertype,msg->info.name,msg->info.passwd);
+	sprintf(sql,"select * from usrinfo where staffno=%d;",msg->info.no);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+		printf("---sqlite3-get-table-select-failed---%s.\n",errmsg);
+		strcpy(msg->recvmsg,"name or passwd failed.\n");
+		send(acceptfd,msg,sizeof(MSG),0);
+	}else{
+		//printf("----nrow-----%d,ncolumn-----%d.\n",nrow,ncolumn);	
+			index = ncolumn;
+			for(i=0;i<nrow;i++){
+			for(j=0;j<ncolumn;j++){
+			printf("%s:%s\n",result[j],result[index++]);
+			/* */
+			}
+			}
+			strcpy(msg->recvmsg,"OK");
+			send(acceptfd,msg,sizeof(MSG),0);
+		}
+	return 0;	
 }
-
 
 int process_admin_modify_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
-
+	char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	char** i;
+	msg->info.usertype =  msg->usertype;
+	strcpy(msg->info.name,msg->username);
+	strcpy(msg->info.passwd,msg->passwd);
+	printf("usrtype: %#x-----usrname: %s---passwd: %s.\n",msg->info.usertype,msg->info.name,msg->info.passwd);
+	if(set_modify_ff_info_sql(get_modify_ff_info_type(msg->recvmsg),msg,sql)){
+	strcpy(msg->recvmsg,"modify type failed.\n");
+	send(acceptfd,msg,sizeof(MSG),0);
+	return -1;
+	}
+	printf("%s\n",sql);
+	if(sqlite3_exec(db,sql,NULL,NULL,&errmsg)!=SQLITE_OK){
+	printf("sqlite3-exec-update-failed-%s------%d.\n",__func__,__LINE__);
+	strcpy(msg->recvmsg,"modify failed.\n");
+	send(acceptfd,msg,sizeof(MSG),0);
+	}else{
+	printf("sqlite3-exec-update-success-%s------%d.\n",__func__,__LINE__);
+	strcpy(msg->recvmsg,"OK");
+	send(acceptfd,msg,sizeof(MSG),0);
+	}
+	return 0;	
 }
-
 
 int process_admin_adduser_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
+	char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	msg->info.usertype =  msg->usertype;
+	strcpy(msg->info.name,msg->username);
+	strcpy(msg->info.passwd,msg->passwd);
 
 }
 
@@ -89,6 +222,12 @@ int process_admin_adduser_request(int acceptfd,MSG *msg)
 int process_admin_deluser_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
+char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	msg->info.usertype =  msg->usertype;
+	strcpy(msg->info.name,msg->username);
+	strcpy(msg->info.passwd,msg->passwd);
 
 }
 
@@ -96,12 +235,85 @@ int process_admin_deluser_request(int acceptfd,MSG *msg)
 int process_admin_query_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
-
+	char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	int nrow,ncolumn,index;
+	int i,j;
+	msg->info.usertype =  msg->usertype;
+	strcpy(msg->info.passwd,msg->passwd);
+	printf("usrtype: %#x-----usrname: %s---passwd: %s.\n",msg->info.usertype,msg->info.name,msg->info.passwd);
+	if(strcmp(msg->recvmsg,"all")==0){
+	sprintf(sql,"select * from usrinfo;");
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+	printf("---sqlite3-get-table-select-failed---%s.\n",errmsg);
+	strcpy(msg->recvmsg,"name or passwd failed.\n");
+	send(acceptfd,msg,sizeof(MSG),0);
+	}else{
+		//printf("----nrow-----%d,ncolumn-----%d.\n",nrow,ncolumn);	
+			index = ncolumn;
+			for(i=0;i<nrow;i++){
+			for(j=0;j<ncolumn;j++){
+			printf("%s:%s\n",result[j],result[index++]);
+			/* */
+			}
+			}
+			strcpy(msg->recvmsg,"OK");
+			send(acceptfd,msg,sizeof(MSG),0);
+		}
+	}
+	if(strcmp(msg->recvmsg,"name")==0){
+	sprintf(sql,"select * from usrinfo where name='%s';",msg->info.name);
+	printf("------%s------%s------%d.\n",__func__,sql,__LINE__);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+	//printf("---sqlite3-get-table-select-failed---%s.\n",errmsg);
+	strcpy(msg->recvmsg,"sqlite3 get table failed.\n");
+	send(acceptfd,msg,sizeof(MSG),0);
+	}else{
+			if(nrow == 0){
+			strcpy(msg->recvmsg,"name or passwd failed.\n");
+			send(acceptfd,msg,sizeof(MSG),0);
+			}else{		
+			//printf("----nrow-----%d,ncolumn-----%d.\n",nrow,ncolumn);	
+			index = ncolumn;
+			msg->info.no = atoi(result[index++]);
+			msg->info.usertype = atoi(result[index++]);
+			strcpy(msg->info.name,result[index++]);
+			strcpy(msg->info.passwd,result[index++]);
+			msg->info.age = atoi(result[index++]);
+			strcpy(msg->info.phone,result[index++]);
+			strcpy(msg->info.addr,result[index++]);
+			strcpy(msg->info.work,result[index++]);
+			strcpy(msg->info.date,result[index++]);
+			msg->info.level = atoi(result[index++]);
+			msg->info.salary = atof(result[index++]);
+			index = ncolumn;
+			for(i=0;i<nrow;i++){
+			for(j=0;j<ncolumn;j++){
+			printf("%s:%s\n",result[j],result[index++]);
+			/* */
+			}
+			}
+			strcpy(msg->recvmsg,"OK");
+			send(acceptfd,msg,sizeof(MSG),0);
+		}
+	}
+	}
+	return 0;	
 }
 
 int process_admin_history_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
+	char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	
+	msg->info.usertype =  msg->usertype;
+	strcpy(msg->info.name,msg->username);
+	strcpy(msg->info.passwd,msg->passwd);
+
+
 
 }
 
@@ -109,6 +321,12 @@ int process_admin_history_request(int acceptfd,MSG *msg)
 int process_client_quit_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
+	char sql[DATALEN] = {0};
+	char *errmsg;
+	char **result;
+	msg->info.usertype =  msg->usertype;
+	strcpy(msg->info.name,msg->username);
+	strcpy(msg->info.passwd,msg->passwd);
 
 }
 
@@ -205,10 +423,10 @@ int main(int argc, const char *argv[])
 	memset(&serveraddr,0,sizeof(serveraddr));
 	memset(&clientaddr,0,sizeof(clientaddr));
 	serveraddr.sin_family = AF_INET;
-//	serveraddr.sin_port   = htons(atoi(argv[2]));
-//	serveraddr.sin_addr.s_addr = inet_addr(argv[1]);
-	serveraddr.sin_port   = htons(5001);
-	serveraddr.sin_addr.s_addr = inet_addr("192.168.1.200");
+	serveraddr.sin_port   = htons(atoi(argv[2]));
+	serveraddr.sin_addr.s_addr = inet_addr(argv[1]);
+//	serveraddr.sin_port   = htons(55555);
+//	serveraddr.sin_addr.s_addr = inet_addr("192.168.1.40");
 
 
 	//绑定网络套接字和网络结构体

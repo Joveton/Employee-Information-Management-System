@@ -95,6 +95,18 @@ typedef struct thread_node{
 	struct thread_node *next;
 }linklist, *plinklist;
 
+//数据修改消息
+char*modify_type[]={"staffno",
+		 			"usertype",
+		 			"name",
+		 			"passwd",
+		 			"age",
+		 			"phone",
+		 			"addr",
+		 			"work",
+		 			"date",
+		 			"level",
+		 			"salary"};
 
 #endif
 

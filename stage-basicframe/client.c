@@ -438,7 +438,6 @@ void do_user_query(int sfd, MSG *cmessage)
 	{
 		printf("用户查询失败\n");
 	}
-
 }
 
 void do_user_modify(int sfd, MSG *cmessage)
@@ -466,11 +465,8 @@ void do_user_modify(int sfd, MSG *cmessage)
 			{
 				printf("住址更改失败\n");
 			}
-			
 	}
 }
-
-
 
 void do_quit(int sfd, MSG *cmessage)
 {
@@ -489,4 +485,3 @@ void display_table_info(MSG *cmessage)
 	printf("%d\t %4d\t %12s %8s %d\t %s\t\n",cmessage->info.no, cmessage->info.usertype,\
 			cmessage->info.name, cmessage->info.passwd,cmessage->info.age, cmessage->info.phone);
 }
-
