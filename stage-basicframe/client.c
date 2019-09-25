@@ -31,7 +31,9 @@ int do_user_login(int sfd, MSG *cmessage);
 void do_user_query(int sfd, MSG *cmessage);
 void do_user_modify(int sfd, MSG *cmessage);
 void do_quit(int sfd, MSG *cmessage);
-void display_table_info(MSG *cmessage);   //这个没写
+
+void display_title();
+void display_table_info(MSG *cmessage);   
 
 int main(int argc,const char * argv[])
 {
@@ -128,28 +130,28 @@ NEXT_ADMIN:   //二级页面
 			ret = scanf("%d",&num);
 		}
 
-		   switch(num)
-		   {
-		   case 1:
-		   do_admin_query(sfd, &cmessage);
-		   break;
-		   case 2:
-		   do_admin_modify(sfd, &cmessage);
-		   break;
-		   case 3:
-		   do_admin_add(sfd, &cmessage);
-		   break;
-		   case 4:
-		   do_admin_delete(sfd, &cmessage);
-		   break;
-		   case 5:
-		   do_admin_history(sfd, &cmessage);
-		   break;
-		   case 6:
-		   goto BFP;
-		   default:
-		   break;
-		   }
+		switch(num)
+		{
+			case 1:
+				do_admin_query(sfd, &cmessage);
+				break;
+			case 2:
+				do_admin_modify(sfd, &cmessage);
+				break;
+			case 3:
+				do_admin_add(sfd, &cmessage);
+				break;
+			case 4:
+				do_admin_delete(sfd, &cmessage);
+				break;
+			case 5:
+				do_admin_history(sfd, &cmessage);
+				break;
+			case 6:
+				goto BFP;
+			default:
+				break;
+		}
 	}
 
 
@@ -169,21 +171,19 @@ NEXT_USER:  //二级页面
 			ret = scanf("%d", &num);
 		}
 
-		/*
-		   switch(num)
-		   {
-		   case 1:
-		   do_user_query(sfd,&cmessage);
-		   break;
-		   case 2:
-		   do_user_modify(sfd, &cmessage);
-		   break;
-		   case 3:
-		   goto BFP;
-		   default:
-		   break;
-		   }
-		   */
+		switch(num)
+		{
+			case 1:
+				do_user_query(sfd,&cmessage);
+				break;
+			case 2:
+				//do_user_modify(sfd, &cmessage);
+				break;
+			case 3:
+				goto BFP;
+			default:
+				break;
+		}
 
 
 	}
@@ -229,14 +229,11 @@ void do_admin_query(int sfd, MSG *cmessage)
 
 			send(sfd, cmessage, sizeof(MSG), 0);
 			recv(sfd, cmessage, sizeof(MSG), 0);
-			if(strcmp(cmessage->recvmsg, "begin")==0)
+			if(strcmp(cmessage->recvmsg, "OK")==0)
 			{
+				display_title();
 				display_table_info(cmessage);
-				while(strcmp(cmessage->recvmsg, "over") != 0)
-				{
-					recv(sfd, cmessage, sizeof(MSG), 0);
-					display_table_info(cmessage);
-				}
+			
 			}else
 			{
 				printf("查询姓名失败\n");
@@ -302,6 +299,8 @@ void do_admin_modify(int sfd, MSG *cmessage)
 				printf("请输入要修改的年龄:\n");
 				scanf("%d", &cmessage->info.age);
 				strcpy(cmessage->recvmsg,"age");
+				//printf("----------------%d\n",cmessage->info.age);
+				//printf("----------------%s\n",cmessage->recvmsg);
 				send(sfd, cmessage, sizeof(MSG), 0);
 				recv(sfd, cmessage, sizeof(MSG), 0);
 				if(strcmp(cmessage->recvmsg, "OK")==0)
@@ -312,7 +311,7 @@ void do_admin_modify(int sfd, MSG *cmessage)
 					printf("修改年龄失败!\n");
 				}
 				break;
-			case 10:`
+			case 10:
 				return ;
 			default:
 				break;
@@ -358,21 +357,52 @@ void do_admin_add(int sfd, MSG *cmessage)
 		printf("插入新用户成功\n");
 	}else
 	{
-		printf("插入失败\n");
+		printf("插入新用户失败\n");
 	}
-	
-	
+
+
 }
 
 void do_admin_delete(int sfd, MSG *cmessage)
 {
 	cmessage->msgtype = ADMIN_DELUSER;
 	printf("请输入要删除员工的工号:");
+	scanf("%d", &cmessage->info.no);
+	send(sfd, cmessage, sizeof(MSG), 0);
+	recv(sfd, cmessage, sizeof(MSG), 0);
+	if(strcmp(cmessage->recvmsg, "OK"))
+	{
+		printf("删除用户成功\n");
+	}else
+	{
+		printf("删除用户失败\n");
+	}
+
 }
+
 void do_admin_history(int sfd, MSG *cmessage)
 {
-	printf("---history--\n");
+	cmessage->msgtype = ADMIN_HISTORY;
+	send(sfd, cmessage, sizeof(MSG), 0);
+	recv(sfd, cmessage, sizeof(MSG), 0);
+
+	if(strcmp(cmessage->recvmsg, "begin")==0)
+	{
+		printf("开始接收数据\n");
+		while(strcmp(cmessage->recvmsg, "over")!=0)
+		{
+			recv(sfd,cmessage, sizeof(MSG), 0);
+			printf("%s\n",cmessage->recvmsg);
+		}
+	}else
+	{
+		printf("查询历史失败!\n");
+	}
 }
+
+
+
+
 
 
 int do_user_login(int sfd, MSG *cmessage)
@@ -392,10 +422,54 @@ int do_user_login(int sfd, MSG *cmessage)
 	}
 	return -1;
 }
-/*
-   void do_user_query(int sfd, MSG *cmessage);
-   void do_user_modify(int sfd, MSG *cmessage);
-   */
+
+
+void do_user_query(int sfd, MSG *cmessage)
+{
+	cmessage->msgtype = USER_QUERY;
+	send(sfd, cmessage, sizeof(MSG), 0);
+	recv(sfd, cmessage, sizeof(MSG), 0);
+
+	if(strcmp(cmessage->recvmsg, "OK")==0)
+	{
+		display_title();
+		display_table_info(cmessage);
+	}else
+	{
+		printf("用户查询失败\n");
+	}
+
+}
+
+void do_user_modify(int sfd, MSG *cmessage)
+{
+	int num;
+	printf("*****USER MODIFY*****\n");
+	printf("*****************************************\n");
+	printf("1.家庭住址    2.电话    3.密码     4.退出\n");
+	printf("*****************************************\n");
+
+	printf("请输入数字:");
+	scanf("%d",&num);
+	switch(num)
+	{
+		case 1:
+			strcpy(cmessage->recvmsg,"addr");
+			printf("请输入新的家庭住址:");
+			scanf("%s", cmessage->info.addr);
+			send(sfd, cmessage, sizeof(MSG), 0);
+			recv(sfd, cmessage, sizeof(MSG), 0);
+			if(strcmp(cmessage->recvmsg ,"OK")==0)
+			{
+				printf("住址更改成功\n");
+			}else
+			{
+				printf("住址更改失败\n");
+			}
+			
+	}
+}
+
 
 
 void do_quit(int sfd, MSG *cmessage)
@@ -405,8 +479,14 @@ void do_quit(int sfd, MSG *cmessage)
 }
 
 
+void display_title()
+{
+	printf("工号    用户类型     姓名     密码     年龄    电话\n");
+}
+
 void display_table_info(MSG *cmessage)
 {
-	printf("---00----\n");
+	printf("%d\t %4d\t %12s %8s %d\t %s\t\n",cmessage->info.no, cmessage->info.usertype,\
+			cmessage->info.name, cmessage->info.passwd,cmessage->info.age, cmessage->info.phone);
 }
 
