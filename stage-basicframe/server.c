@@ -67,6 +67,7 @@ int get_modify_ff_info_type(char *modify_ff_info_type){
 	return -1;
 
 }
+/* */
 int	set_modify_ff_info_sql(int modify_ff_info_type,MSG *msg,char* sql){
 	printf("---modify_ff_info_type---%d---%s------%d.\n",modify_ff_info_type,__func__,__LINE__);
 	switch(modify_ff_info_type){
@@ -111,6 +112,7 @@ default:
 	printf("------%s------%s------%d.\n",__func__,sql,__LINE__);
 	return 0;
 }
+/* */
 int process_user_modify_request(int acceptfd,MSG *msg)
 {
 	printf("------------%s-----------%d.\n",__func__,__LINE__);
@@ -148,12 +150,31 @@ int process_user_query_request(int acceptfd,MSG *msg)
 	char sql[DATALEN] = {0};
 	char *errmsg;
 	char **result;
+	int nrow,ncolumn,index;
+	int i,j;
 	msg->info.usertype =  msg->usertype;
 	strcpy(msg->info.name,msg->username);
 	strcpy(msg->info.passwd,msg->passwd);
-
+	printf("usrtype: %#x-----usrname: %s---passwd: %s.\n",msg->info.usertype,msg->info.name,msg->info.passwd);
+	sprintf(sql,"select * from usrinfo where staffno=%d;",msg->info.no);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+		printf("---sqlite3-get-table-select-failed---%s.\n",errmsg);
+		strcpy(msg->recvmsg,"name or passwd failed.\n");
+		send(acceptfd,msg,sizeof(MSG),0);
+	}else{
+		//printf("----nrow-----%d,ncolumn-----%d.\n",nrow,ncolumn);	
+			index = ncolumn;
+			for(i=0;i<nrow;i++){
+			for(j=0;j<ncolumn;j++){
+			printf("%s:%s\n",result[j],result[index++]);
+			/* */
+			}
+			}
+			strcpy(msg->recvmsg,"OK");
+			send(acceptfd,msg,sizeof(MSG),0);
+		}
+	return 0;	
 }
-
 
 int process_admin_modify_request(int acceptfd,MSG *msg)
 {
@@ -183,7 +204,6 @@ int process_admin_modify_request(int acceptfd,MSG *msg)
 	}
 	return 0;	
 }
-
 
 int process_admin_adduser_request(int acceptfd,MSG *msg)
 {
@@ -218,9 +238,68 @@ int process_admin_query_request(int acceptfd,MSG *msg)
 	char sql[DATALEN] = {0};
 	char *errmsg;
 	char **result;
+	int nrow,ncolumn,index;
+	int i,j;
 	msg->info.usertype =  msg->usertype;
-	strcpy(msg->info.name,msg->username);
 	strcpy(msg->info.passwd,msg->passwd);
+	printf("usrtype: %#x-----usrname: %s---passwd: %s.\n",msg->info.usertype,msg->info.name,msg->info.passwd);
+	if(strcmp(msg->recvmsg,"all")==0){
+	sprintf(sql,"select * from usrinfo;");
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+	printf("---sqlite3-get-table-select-failed---%s.\n",errmsg);
+	strcpy(msg->recvmsg,"name or passwd failed.\n");
+	send(acceptfd,msg,sizeof(MSG),0);
+	}else{
+		//printf("----nrow-----%d,ncolumn-----%d.\n",nrow,ncolumn);	
+			index = ncolumn;
+			for(i=0;i<nrow;i++){
+			for(j=0;j<ncolumn;j++){
+			printf("%s:%s\n",result[j],result[index++]);
+			/* */
+			}
+			}
+			strcpy(msg->recvmsg,"OK");
+			send(acceptfd,msg,sizeof(MSG),0);
+		}
+	}
+	if(strcmp(msg->recvmsg,"name")==0){
+	sprintf(sql,"select * from usrinfo where name='%s';",msg->info.name);
+	printf("------%s------%s------%d.\n",__func__,sql,__LINE__);
+	if(sqlite3_get_table(db,sql,&result,&nrow,&ncolumn,&errmsg) != SQLITE_OK){
+	//printf("---sqlite3-get-table-select-failed---%s.\n",errmsg);
+	strcpy(msg->recvmsg,"sqlite3 get table failed.\n");
+	send(acceptfd,msg,sizeof(MSG),0);
+	}else{
+			if(nrow == 0){
+			strcpy(msg->recvmsg,"name or passwd failed.\n");
+			send(acceptfd,msg,sizeof(MSG),0);
+			}else{		
+			//printf("----nrow-----%d,ncolumn-----%d.\n",nrow,ncolumn);	
+			index = ncolumn;
+			msg->info.no = atoi(result[index++]);
+			msg->info.usertype = atoi(result[index++]);
+			strcpy(msg->info.name,result[index++]);
+			strcpy(msg->info.passwd,result[index++]);
+			msg->info.age = atoi(result[index++]);
+			strcpy(msg->info.phone,result[index++]);
+			strcpy(msg->info.addr,result[index++]);
+			strcpy(msg->info.work,result[index++]);
+			strcpy(msg->info.date,result[index++]);
+			msg->info.level = atoi(result[index++]);
+			msg->info.salary = atof(result[index++]);
+			index = ncolumn;
+			for(i=0;i<nrow;i++){
+			for(j=0;j<ncolumn;j++){
+			printf("%s:%s\n",result[j],result[index++]);
+			/* */
+			}
+			}
+			strcpy(msg->recvmsg,"OK");
+			send(acceptfd,msg,sizeof(MSG),0);
+		}
+	}
+	}
+	return 0;	
 }
 
 int process_admin_history_request(int acceptfd,MSG *msg)
@@ -229,6 +308,7 @@ int process_admin_history_request(int acceptfd,MSG *msg)
 	char sql[DATALEN] = {0};
 	char *errmsg;
 	char **result;
+	
 	msg->info.usertype =  msg->usertype;
 	strcpy(msg->info.name,msg->username);
 	strcpy(msg->info.passwd,msg->passwd);
@@ -343,10 +423,10 @@ int main(int argc, const char *argv[])
 	memset(&serveraddr,0,sizeof(serveraddr));
 	memset(&clientaddr,0,sizeof(clientaddr));
 	serveraddr.sin_family = AF_INET;
-//	serveraddr.sin_port   = htons(atoi(argv[2]));
-//	serveraddr.sin_addr.s_addr = inet_addr(argv[1]);
-	serveraddr.sin_port   = htons(55555);
-	serveraddr.sin_addr.s_addr = inet_addr("192.168.1.40");
+	serveraddr.sin_port   = htons(atoi(argv[2]));
+	serveraddr.sin_addr.s_addr = inet_addr(argv[1]);
+//	serveraddr.sin_port   = htons(55555);
+//	serveraddr.sin_addr.s_addr = inet_addr("192.168.1.40");
 
 
 	//绑定网络套接字和网络结构体
