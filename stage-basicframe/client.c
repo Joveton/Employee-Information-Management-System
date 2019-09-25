@@ -318,7 +318,7 @@ int main(int argc, const char *argv[])
 //	serveraddr.sin_port   = htons(atoi(argv[2]));
 //	serveraddr.sin_addr.s_addr = inet_addr(argv[1]);
 	serveraddr.sin_port   = htons(5001);
-	serveraddr.sin_addr.s_addr = inet_addr("192.168.1.200");
+	serveraddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
 	if(connect(sockfd,(const struct sockaddr *)&serveraddr,addrlen) == -1){
 		perror("connect failed.\n");
